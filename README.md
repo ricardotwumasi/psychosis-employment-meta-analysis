@@ -9,7 +9,7 @@ This code may be repurposed for other meta-analyses or updated to add studies as
 - Ninon Crestois
 - Ricardo Twumasi
 
-## Requirements
+## Requirements 
 
 - R (version 4.0.0 or higher recommended)
 - R packages: `metafor`
@@ -71,7 +71,7 @@ RR <- p_treat/p_contr
 log_RR <- log(RR)
 Var_log_RR <- (1 / a) - (1 / n1) + (1 / b) - (1 / n2)
 
-#Calculating effect size of Manning (1995)
+#Calculating effect size of Manning (1995) 
 k<-72 #from table 1, 66% of 109 people 
 n<-109 #from table 1, n=109
 p<-k/n
