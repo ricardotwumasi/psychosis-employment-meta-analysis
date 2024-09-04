@@ -1,6 +1,8 @@
 # Meta-Analysis of Employer Attitudes Towards Individuals with Psychosis
 
-This repository contains R code for conducting a meta-analysis on employer discrimination towards individuals with psychosis. The analysis includes an overall meta-analysis, a subgroup analysis using proportion data, and effect size calculations for individual studies.
+This repository contains R code for replicating our meta-analysis on employer discrimination towards individuals with psychosis (Crestois et al., in press). The analysis includes an overall meta-analysis, a subgroup analysis using proportion data, and effect size calculations for individual studies.
+
+This code may be repurposed for other meta-analyses or updated to add studies as they are published.
 
 ## Contributors
 
