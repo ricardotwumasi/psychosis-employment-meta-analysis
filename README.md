@@ -202,7 +202,7 @@ baujat(rma_raw)
 data$logit_p <- log(data$p / (1 - data$p))
 
 # Calculate variance of the logit-transformed proportions
-data$logit_variance <- (data$variance) / (data$p * (1 - data$p))^2
+data$logit_variance <- (data$variance) / (data$p * (1 - data$p))^2 ####Ninon please check this ####
 
 # Meta-analysis using logit-transformed proportions
 rma_logit <- rma(yi = logit_p, vi = logit_variance, data = data)
