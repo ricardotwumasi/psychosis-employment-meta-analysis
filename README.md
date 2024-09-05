@@ -238,6 +238,20 @@ This script performs the following steps:
 - The trim-and-fill method provides an adjusted effect size estimate accounting for potential publication bias.
 - For the subgroup analysis, both raw and logit-transformed results are provided. The logit transformation can help handle proportions close to 0 or 1.
 
+## References for data extraction in meta-analysis
+
+Andersson J, Luthra R, Hurtig P, Tideman M. Employer attitudes toward hiring persons with disabilities: A vignette study in Sweden. Journal of Vocational Rehabilitation 2015;43(1):41-50
+
+Bricout JC, Bentley KJ. Disability status and perceptions of employability by employers. Social Work Research 2000;24(2):87-95.
+
+Fyhn T, Sveinsdottir V, Reme SE, Sandal GM. A mixed methods study of employers’ and employees’ evaluations of job seekers with a mental illness, disability, or of a cultural minority. Work 2021;70(1):235-245
+
+Manning C, White PD. Attitudes of employers to the mentally ill. Psychiatric Bulletin 1995;19(9):541-543.
+
+Tsang HW, Corrigan PW, Fung KM, et al. Sino-American employer perspective about behavioral-driven health conditions: Predictive analyses. International Journal of Psychiatry in Clinical Practice 2012;16(4):284-292. 
+
+Zissi A, Rontos C, Papageorgiou D, Pierrakou C, Chtouris S. Greek employers’ attitudes to employing people with disabilities: Effects of the type of disability. Scandinavian Journal of Disability Research 2007;9(1):14-25.
+
 ## Contributing
 
 Please feel free to submit issues or pull requests if you have suggestions for improvements or find any bugs.
