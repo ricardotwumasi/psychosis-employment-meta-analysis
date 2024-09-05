@@ -250,16 +250,18 @@ Copyright (c) 2024 Ninon Crestois, Ricardo Twumasi
 
 ## References
 
-1. Wang, N. (2023). Conducting Meta-Analyses of Proportions in R. Journal of Behavioral Data Science, 3(2), 64-126. https://dx.doi.org/10.35566/jbds/v3n2/wang
+1. Viechtbauer, W. (2024). metafor: Meta-Analysis Package for R (Version 4.2-0) [Software Manual]. https://cran.r-project.org/web/packages/metafor/metafor.pdf
+ 
+2. Wang, N. (2023). Conducting Meta-Analyses of Proportions in R. Journal of Behavioral Data Science, 3(2), 64-126. https://dx.doi.org/10.35566/jbds/v3n2/wang
 
-2. Viechtbauer, W. (2010). Conducting meta-analyses in R with the metafor package. Journal of Statistical Software, 36(3), 1-48. https://dx.doi.org/10.18637/jss.v036.i03
+3. Viechtbauer, W. (2010). Conducting meta-analyses in R with the metafor package. Journal of Statistical Software, 36(3), 1-48. https://dx.doi.org/10.18637/jss.v036.i03
 
-3. Cochran, W. G. (1954). The combination of estimates from different experiments. Biometrics, 10(1), 101-129.
+4. Cochran, W. G. (1954). The combination of estimates from different experiments. Biometrics, 10(1), 101-129.
 
-4. Duval, S., & Tweedie, R. (2000). Trim and fill: a simple funnel-plot–based method of testing and adjusting for publication bias in meta-analysis. Biometrics, 56(2), 455-463.
+5. Duval, S., & Tweedie, R. (2000). Trim and fill: a simple funnel-plot–based method of testing and adjusting for publication bias in meta-analysis. Biometrics, 56(2), 455-463.
 
-5. Egger, M., Smith, G. D., Schneider, M., & Minder, C. (1997). Bias in meta-analysis detected by a simple, graphical test. Bmj, 315(7109), 629-634.
+6. Egger, M., Smith, G. D., Schneider, M., & Minder, C. (1997). Bias in meta-analysis detected by a simple, graphical test. Bmj, 315(7109), 629-634.
 
-6. Higgins, J. P., & Thompson, S. G. (2002). Quantifying heterogeneity in a meta‐analysis. Statistics in medicine, 21(11), 1539-1558.
+7. Higgins, J. P., & Thompson, S. G. (2002). Quantifying heterogeneity in a meta‐analysis. Statistics in medicine, 21(11), 1539-1558.
 
-7. Higgins, J. P., Thompson, S. G., Deeks, J. J., & Altman, D. G. (2003). Measuring inconsistency in meta-analyses. Bmj, 327(7414), 557-560.
+8. Higgins, J. P., Thompson, S. G., Deeks, J. J., & Altman, D. G. (2003). Measuring inconsistency in meta-analyses. Bmj, 327(7414), 557-560.
