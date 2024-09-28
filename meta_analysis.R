@@ -1,44 +1,44 @@
-# Load the metafor package
+# Load required packages
 library(metafor)
+library(dplyr)
 
-# Input your data
-data <- data.frame(
-  author = c("Andersson et al.", "Bricout & Bentley", "Fyhn et al.", "Manning & White", "Tsang et al.", "Zissi et al."),
-  year = c(2015, 2000, 2021, 1995, 2012, 2007),
-  effect_size = c(0.533, 0.84, 0.473, 0.666, 1.99, 0.972),
-  variance = c(0.0161, 0.0273, 0.00128, 0.0409, 0.0517, 0.0492),
-  n = c(71, 86, 882, 109, 183, 102)
-)
-# Truncate study titles
-data$TruncatedTitle <- c(
-  "Andersson et al",
-  "Bricout & Bentley",
-  "Fyhn et al.",
-  "Manning & White",
-  "Tsang et al.",
-  "Zissi et al."
-)
+# Read the effect size data
+data <- read.csv("data/effect_sizes.csv")
+
+# Ensure effect size (yi) and variance (vi) are numeric
+data$yi <- as.numeric(data$yi)
+data$vi <- as.numeric(data$vi)
 
 # Run the meta-analysis
-meta_analysis <- rma(yi = effect_size, vi = variance, data = data, method = "REML", test = "knha")
+meta_analysis <- rma(yi = yi, vi = vi, data = data, method = "REML", test = "knha")
 
 # View the results
 summary(meta_analysis)
 
-# Create forest plot with truncated titles
-forest(meta_analysis, slab = data$TruncatedTitle, xlab = "Effect Size", 
-       mlab = "Random-Effects Model", addpred = TRUE)
+# Create forest plot
+forest(meta_analysis, slab = data$author, 
+       xlab = "Hedges' g", 
+       mlab = "Random-Effects Model",
+       addpred = TRUE,
+       xlim = c(-2, 3),
+       alim = c(-2, 2),
+       refline = 0,
+       header = "Study")
 
 # Create a Baujat plot
 baujat(meta_analysis)
 
-# Egger's regression test
-eggers_test <- regtest(meta_analysis, model="rma", predictor="sei")
-print(eggers_test)
-
-# Duval and Tweedie's trim-and-fill method
-tf_meta_analysis <- trimfill(meta_analysis)
-summary(tf_meta_analysis)
-
 # Funnel plot with trim-and-fill
 funnel(tf_meta_analysis)
+
+# Calculate Fail-Safe N (Rosenthal's method)
+fsn <- fsn(yi, vi, data = data, type = "Rosenthal")
+print(fsn)
+
+# Calculate Orwin's Fail-Safe N
+# Define the target effect size (e.g., 0.2 for a small effect)
+target_effect <- 0.2
+
+# Calculate Orwin's Fail-Safe N
+orwin_fsn <- fsn(yi, vi, data = data, type = "Orwin", target = target_effect)
+print(orwin_fsn)
