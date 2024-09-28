@@ -1,44 +1,99 @@
-# Load required packages
+# Load necessary library
 library(metafor)
-library(dplyr)
 
-# Read the effect size data
-data <- read.csv("data/effect_sizes.csv")
+# Create data frame with study data
+study_data <- data.frame(
+  Author = c("Zissi et al.", "Manning et al.", "Tsang et al."),
+  Successes = c(74, 72, 161),
+  Total = c(102, 109, 183),
+  stringsAsFactors = FALSE
+)
 
-# Ensure effect size (yi) and variance (vi) are numeric
-data$yi <- as.numeric(data$yi)
-data$vi <- as.numeric(data$vi)
+# Calculate proportions
+study_data$Proportion <- study_data$Successes / study_data$Total
 
-# Run the meta-analysis
-meta_analysis <- rma(yi = yi, vi = vi, data = data, method = "REML", test = "knha")
+# Check for proportions exactly 0 or 1 to avoid issues with logit transformation
+if(any(study_data$Proportion == 0 | study_data$Proportion == 1)) {
+  stop("Proportions of 0 or 1 detected. Consider adding a continuity correction.")
+}
 
-# View the results
-summary(meta_analysis)
+# Calculate variance for raw proportions
+study_data$Variance <- (study_data$Proportion * (1 - study_data$Proportion)) / study_data$Total
 
-# Create forest plot
-forest(meta_analysis, slab = data$author, 
-       xlab = "Hedges' g", 
+# Truncate study titles for consistency (if necessary)
+study_data$TruncatedTitle <- c(
+  "Zissi et al.",
+  "Manning & White",
+  "Tsang et al."
+)
+
+# Meta-analysis using raw proportions (Proportion Method)
+meta_raw <- rma(yi = Proportion, vi = Variance, data = study_data, method = "REML")
+
+# Summary of the raw proportions meta-analysis
+summary(meta_raw)
+
+# Enhanced Forest Plot for raw proportions without transformation
+par(mar = c(4, 8, 4, 2))  # Adjust margins: bottom, left, top, right
+
+forest(meta_raw, 
+       slab = study_data$TruncatedTitle, 
+       xlab = "Proportion",
+       ilab = study_data$Total, # Add Total as an additional column
+       ilab.xpos = max(meta_raw$ci.ub, na.rm = TRUE) * 0.6, # Positioning for ilab
+       cex = 0.8,               # Text size
+       psize = 1,               # Point size
+       header = "Study",
        mlab = "Random-Effects Model",
-       addpred = TRUE,
-       xlim = c(-2, 3),
-       alim = c(-2, 2),
-       refline = 0,
-       header = "Study")
+       addfit = TRUE,           # Add summary effect
+       showweights = TRUE       # Show weights
+)
 
-# Create a Baujat plot
-baujat(meta_analysis)
+# Add a legend for the additional information
+op <- par(cex=0.8, font=2)
+text(x = max(meta_raw$ci.ub, na.rm = TRUE) * 0.6, 
+     y = length(study_data$Author) + 2, 
+     labels = "n", pos = 3)
+par(op)
 
-# Funnel plot with trim-and-fill
-funnel(tf_meta_analysis)
+# Reset plotting parameters to default
+par(mar = c(5, 4, 4, 2) + 0.1)
 
-# Calculate Fail-Safe N (Rosenthal's method)
-fsn <- fsn(yi, vi, data = data, type = "Rosenthal")
-print(fsn)
+# Baujat plot to identify influential studies
+baujat(meta_raw)
 
-# Calculate Orwin's Fail-Safe N
-# Define the target effect size (e.g., 0.2 for a small effect)
-target_effect <- 0.2
+# Logit transformation of proportions
+study_data$LogitProportion <- log(study_data$Proportion / (1 - study_data$Proportion))
 
-# Calculate Orwin's Fail-Safe N
-orwin_fsn <- fsn(yi, vi, data = data, type = "Orwin", target = target_effect)
-print(orwin_fsn)
+# Calculate variance of the logit-transformed proportions
+# Var(logit(p)) = Var(p) / [p(1 - p)]^2
+study_data$LogitVariance <- study_data$Variance / (study_data$Proportion * (1 - study_data$Proportion))^2
+
+# Meta-analysis using logit-transformed proportions
+meta_logit <- rma(yi = LogitProportion, vi = LogitVariance, data = study_data, method = "REML")
+
+# Summary of the logit-transformed proportions meta-analysis
+summary(meta_logit)
+
+# Transform the summary effect back to proportions
+transform_proportion <- function(logit) {
+  exp(logit) / (1 + exp(logit))
+}
+
+# Extract the transformed mean proportion and its confidence interval
+logit_summary <- summary(meta_logit)
+transformed_mean <- transform_proportion(logit_summary$beta)
+transformed_ci_lower <- transform_proportion(logit_summary$ci.lb)
+transformed_ci_upper <- transform_proportion(logit_summary$ci.ub)
+
+# Display the transformed results
+cat("Transformed Mean Proportion:", round(transformed_mean, 3), "\n")
+cat("95% CI:", round(transformed_ci_lower, 3), "-", round(transformed_ci_upper, 3), "\n")
+
+# Optional: Enhanced Forest Plot for logit-transformed proportions
+# This requires back-transforming the estimates and variances
+# Note: metafor does not natively support back-transformed forest plots,
+# so it's often better to interpret on the logit scale or use other visualization tools.
+
+# Reset plotting parameters to default
+par(mar = c(5, 4, 4, 2) + 0.1)
