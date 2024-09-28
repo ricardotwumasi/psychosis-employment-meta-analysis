@@ -1,6 +1,6 @@
 # Meta-Analysis of Employer Attitudes Towards Individuals with Psychosis
 
-This repository contains R code for replicating our meta-analysis on employer discrimination towards individuals with psychosis (Crestois et al., in press). The analysis includes an overall meta-analysis, a subgroup analysis using proportion data, and effect size calculations for individual studies.
+This repository contains R code for replicating our meta-analysis on employer discrimination towards individuals with psychosis (Crestois et al., in preparation). The analysis includes an overall meta-analysis, a subgroup analysis using proportion data, and effect size calculations for individual studies.
 
 This code may be repurposed for other meta-analyses or updated to add studies as they are published.
 
@@ -40,187 +40,375 @@ Run each script separately in R
 
 ### 1. Effect Size Calculations (effect_size_calculations.R)
 
-```R
-#Calculation for Anderson et al. (2015)
-mean_psychosis <- 8.23  # Mean of the psychosis group
-SD_psychosis <- 4.26    # Standard deviation of the psychosis group
-reference_point <- 10.5 # Midpoint reference, midpoint assumed to represent neutral interest
-N <- 71
-SMD <- (reference_point - mean_psychosis) / SD_psychosis
-Var_SMD <- (1 / N) + (SMD^2 / (2 * (N - 1)))
+# ===============================================
+# Meta-Analysis Effect Size Calculation Script
+# ===============================================
+# Description:
+# This script calculates effect sizes (Hedges' g) for a meta-analysis 
+# on employment attitudes towards people living with psychosis 
+# across six studies. It handles different types of effect measures 
+# (SMD, RR, PLO) and ensures data validity.
+# 
+# Date: 28-9-24
+# ===============================================
 
-#Calculating effect size of Bricout et al. (2000)
-mean1 <-139.59 #extracted from table 2
-mean2 <- 126.15 
-sd1 <- 17.04
-sd2 <-15.04
-n1 <-74
-n2 <-86
-Sp <- sqrt(((n1 - 1) * sd1^2 + (n2 - 1) * sd2^2) / (n1 + n2 - 2))
-d <- (mean1 - mean2) / Sp
-Var_d <- (n1 + n2) / (n1 * n2) + (d^2 / (2 * (n1 + n2)))
+# -------------------------------
+# 1. Install and Load Packages
+# -------------------------------
 
-#Calculating effect size for Fyhn et al. (2015)
-a <- 692   #negative/neutral assessment in schizophrenic symptom group
-b <- 525  #negative/neutral assessment in control group
-n1 <- 882  # sample size schizophrenic group
-n2 <- 1074  # sample size control group
-p_treat <- a/n1
-p_contr <- b/n2
-RR <- p_treat/p_contr
-log_RR <- log(RR)
-Var_log_RR <- (1 / a) - (1 / n1) + (1 / b) - (1 / n2)
+# Define required packages
+required_packages <- c("metafor", "dplyr", "tidyr", "purrr")
 
-#Calculating effect size of Manning (1995) 
-k<-72 #from table 1, 66% of 109 people 
-n<-109 #from table 1, n=109
-p<-k/n
-SE<-sqrt((p*(1-p))/n)
-logit_p <- log(p / (1 - p))
-SE_logit_p <- SE / (p * (1 - p))
-Var_logit_p <- SE_logit_p^2
+# Install any packages that are not already installed
+installed_packages <- rownames(installed.packages())
+for (pkg in required_packages) {
+  if (!pkg %in% installed_packages) {
+    install.packages(pkg, dependencies = TRUE)
+  }
+}
 
-#Calculating effect size of Tsang et al.(2012)
-k<-161  # from table 1 mental illness, addition of all not offer
-n<-183 #from table 1 mental illness, addition of all conditions
-p<-k/n
-SE<-sqrt((p*(1-p))/n)
-logit_p <- log(p / (1 - p))
-SE_logit_p <- SE / (p * (1 - p))
-Var_logit_p <- SE_logit_p^2
-
-#Calculating effect size of Zissi et al.(2007)
-k<- 74 #from attitudes to employing people with disability, 27% willing to employ people with a hospitalisation record for schizophrenia
-n<-102 #from sample section
-p<-k/n
-SE<-sqrt((p*(1-p))/n)
-logit_p <- log(p / (1 - p))
-SE_logit_p <- SE / (p * (1 - p))
-Var_logit_p <- SE_logit_p^2
-```
-
-This script calculates effect sizes and variances for individual studies using different methods depending on the data available:
-1. Standardized Mean Difference (SMD) for Anderson et al. (2015)
-2. Cohen's d for Bricout et al. (2000)
-3. Risk Ratio (RR) for Fyhn et al. (2015)
-4. Logit-transformed proportions for Manning (1995), Tsang et al. (2012), and Zissi et al. (2007)
-
-### 2. Meta-Analysis (meta_analysis.R)
-
-```R
-# Load the metafor package
+# Load necessary libraries
 library(metafor)
+library(dplyr)
+library(tidyr)
+library(purrr)
 
-# Input your data
-data <- data.frame(
-  author = c("Andersson et al.", "Bricout & Bentley", "Fyhn et al.", "Manning & White", "Tsang et al.", "Zissi et al."),
-  year = c(2015, 2000, 2021, 1995, 2012, 2007),
-  effect_size = c(0.533, 0.84, 0.473, 0.666, 1.99, 0.972),
-  variance = c(0.0161, 0.0273, 0.00128, 0.0409, 0.0517, 0.0492),
-  n = c(71, 86, 882, 109, 183, 102)
+# -------------------------------
+# 2. Define Conversion Function
+# -------------------------------
+
+# Function to convert various effect size measures to Hedges' g
+# Parameters:
+#   yi: Effect size estimate
+#   vi: Variance of the effect size
+#   measure: Type of measure ("SMD", "RR", "PLO")
+#   n1: Sample size of group 1
+#   n2: Sample size of group 2 (if applicable)
+# Returns:
+#   A list containing the converted Hedges' g and its variance
+convert_to_hedges_g <- function(yi, vi, measure, n1, n2 = NULL) {
+  if (measure == "SMD") {
+    # Assuming escalc with measure="SMD" already provides Hedges' g
+    return(list(yi = yi, vi = vi))
+  } else if (measure == "RR") {
+    # Convert log risk ratio to Cohen's d using Chinn (2000) method
+    d <- yi * (sqrt(3) / pi)
+    var_d <- vi * (3 / pi^2)
+  } else if (measure == "PLO") {
+    # Convert log odds to Cohen's d using Chinn (2000) method
+    d <- yi * (sqrt(3) / pi)
+    var_d <- vi * (3 / pi^2)
+  } else {
+    stop("Unsupported measure type")
+  }
+  
+  # Apply correction factor to get Hedges' g
+  n_total <- ifelse(is.null(n2), n1, n1 + n2)
+  if (n_total <= 2) {
+    stop("Total sample size must be greater than 2 for correction factor.")
+  }
+  j <- 1 - (3 / (4 * (n_total - 2)))  # Corrected formula
+  g <- j * d
+  var_g <- j^2 * var_d
+  
+  return(list(yi = g, vi = var_g))
+}
+
+# --------------------------------
+# 3. Create Structured Data Frame
+# --------------------------------
+
+# Create a data frame with all study data
+studies <- tribble(
+  ~author,              ~year, ~measure, ~m1,    ~m2,     ~sd1,   ~sd2,   ~n1, ~n2, ~a,  ~b,  ~c,  ~d,  ~xi, ~ni,
+  "Andersson et al.",   2015, "SMD",    10.47,  8.23,    3.70,   4.26,   210, 71,  NA,  NA,  NA,  NA,  NA,  NA,
+  "Bricout & Bentley", 2000, "SMD",    139.59, 126.15,  17.04,  15.04,  74, 86,  NA,  NA,  NA,  NA,  NA,  NA,
+  "Fyhn et al.",        2021, "RR",     NA,     NA,      NA,     NA,     NA, NA, 692, 525, 882, 1074, NA,  NA,
+  "Manning & White",    1995, "PLO",    NA,     NA,      NA,     NA,     NA, NA,  NA,  NA,  NA,  NA,  72, 109,
+  "Tsang et al.",       2012, "PLO",    NA,     NA,      NA,     NA,     NA, NA,  NA,  NA,  NA,  NA, 161, 183,
+  "Zissi et al.",       2007, "PLO",    NA,     NA,      NA,     NA,     NA, NA,  NA,  NA,  NA,  NA, 74,  102
 )
 
-# Truncate study titles
-data$TruncatedTitle <- c(
-  "Andersson et al",
-  "Bricout & Bentley",
-  "Fyhn et al.",
-  "Manning & White",
-  "Tsang et al.",
-  "Zissi et al."
-)
+# ------------------------------------
+# 4. Validate Study Data
+# ------------------------------------
+
+# Function to validate study data
+# Checks for missing required fields and sufficient sample sizes
+# Parameters:
+#   study: A single row from the studies data frame
+# Returns:
+#   Stops execution with an error message if validation fails
+validate_study_data <- function(study) {
+  if (study$measure == "SMD") {
+    required_fields <- c("m1", "m2", "sd1", "sd2", "n1", "n2")
+    if (any(is.na(study[required_fields]))) {
+      stop(paste("Missing data in study:", study$author))
+    }
+    if ((study$n1 + study$n2) < 3) {
+      stop(paste("Insufficient total sample size in study:", study$author))
+    }
+  } else if (study$measure == "RR") {
+    required_fields <- c("a", "b", "c", "d")
+    if (any(is.na(study[required_fields]))) {
+      stop(paste("Missing data in study:", study$author))
+    }
+    if ((study$a + study$b + study$c + study$d) < 3) {
+      stop(paste("Insufficient total sample size in study:", study$author))
+    }
+  } else if (study$measure == "PLO") {
+    required_fields <- c("xi", "ni")
+    if (any(is.na(study[required_fields]))) {
+      stop(paste("Missing data in study:", study$author))
+    }
+    if (study$ni < 3) {
+      stop(paste("Insufficient sample size in study:", study$author))
+    }
+  } else {
+    stop(paste("Unsupported measure type in study:", study$author))
+  }
+}
+
+# Apply validation to all studies
+walk(split(studies, seq(nrow(studies))), validate_study_data)
+
+# -----------------------------------
+# 5. Calculate Effect Sizes
+# -----------------------------------
+
+# Function to calculate effect size for a single study
+# Parameters:
+#   study: A single row from the studies data frame (as a list)
+# Returns:
+#   A data frame with author, year, yi (Hedges' g), vi (variance), and n (sample size)
+calculate_effect_size <- function(study) {
+  if (study$measure == "SMD") {
+    # Calculate standardized mean difference using escalc
+    res <- escalc(measure = "SMD", 
+                 m1i = study$m1, m2i = study$m2, 
+                 sd1i = study$sd1, sd2i = study$sd2, 
+                 n1i = study$n1, n2i = study$n2)
+    # Convert to Hedges' g (already corrected in escalc with measure="SMD")
+    g <- list(yi = res$yi, vi = res$vi)
+  } else if (study$measure == "RR") {
+    # Calculate risk ratio using escalc
+    res <- escalc(measure = "RR", 
+                 ai = study$a, bi = study$b, 
+                 ci = study$c, di = study$d)
+    # Convert log risk ratio to Hedges' g
+    g <- convert_to_hedges_g(yi = res$yi, vi = res$vi, 
+                            measure = "RR", 
+                            n1 = study$a + study$b, 
+                            n2 = study$c + study$d)
+  } else if (study$measure == "PLO") {
+    # Calculate log odds using escalc
+    res <- escalc(measure = "PLO", 
+                 xi = study$xi, ni = study$ni)
+    # Convert log odds to Hedges' g
+    g <- convert_to_hedges_g(yi = res$yi, vi = res$vi, 
+                            measure = "PLO", 
+                            n1 = study$ni)
+  } else {
+    stop(paste("Unsupported measure type in study:", study$author))
+  }
+  
+  # Determine total sample size for each study
+  if (study$measure == "SMD") {
+    total_n <- study$n1 + study$n2
+  } else if (study$measure == "RR") {
+    total_n <- study$a + study$b + study$c + study$d
+  } else if (study$measure == "PLO") {
+    total_n <- study$ni
+  }
+  
+  # Return a data frame with the results
+  return(data.frame(
+    author = study$author,
+    year = study$year,
+    yi = g$yi,
+    vi = g$vi,
+    n = total_n
+  ))
+}
+
+# Apply the effect size calculation to all studies using purrr::map
+effect_sizes_list <- studies %>%
+  split(1:nrow(studies)) %>%
+  map(calculate_effect_size)
+
+# Combine all effect sizes into a single data frame
+effect_sizes <- bind_rows(effect_sizes_list)
+
+# -----------------------------------
+# 6. Display and Save Results
+# -----------------------------------
+
+# Print the consolidated effect sizes
+print(effect_sizes)
+
+# Define the data directory
+data_dir <- "data"
+
+# Create the 'data' directory if it doesn't exist
+if (!dir.exists(data_dir)) {
+  dir.create(data_dir)
+}
+
+# Define the file path using file.path for cross-platform compatibility
+file_path <- file.path(data_dir, "effect_sizes.csv")
+
+# Save the effect sizes to a CSV file
+write.csv(effect_sizes, file_path, row.names = FALSE)
+
+# -----------------------------------
+# End of Effect Size Script
+# -----------------------------------
+
+# Load required packages
+library(metafor)
+library(dplyr)
+
+# Read the effect size data
+data <- read.csv("data/effect_sizes.csv")
+
+# Ensure effect size (yi) and variance (vi) are numeric
+data$yi <- as.numeric(data$yi)
+data$vi <- as.numeric(data$vi)
 
 # Run the meta-analysis
-meta_analysis <- rma(yi = effect_size, vi = variance, data = data, method = "REML", test = "knha")
+meta_analysis <- rma(yi = yi, vi = vi, data = data, method = "REML", test = "knha")
 
 # View the results
 summary(meta_analysis)
 
-# Create forest plot with truncated titles
-forest(meta_analysis, slab = data$TruncatedTitle, xlab = "Effect Size", 
-       mlab = "Random-Effects Model", addpred = TRUE)
+# Create forest plot
+forest(meta_analysis, slab = data$author, 
+       xlab = "Hedges' g", 
+       mlab = "Random-Effects Model",
+       addpred = TRUE,
+       xlim = c(-2, 3),
+       alim = c(-2, 2),
+       refline = 0,
+       header = "Study")
 
 # Create a Baujat plot
 baujat(meta_analysis)
 
-# Egger's regression test
-eggers_test <- regtest(meta_analysis, model="rma", predictor="sei")
-print(eggers_test)
-
-# Duval and Tweedie's trim-and-fill method
-tf_meta_analysis <- trimfill(meta_analysis)
-summary(tf_meta_analysis)
-
 # Funnel plot with trim-and-fill
 funnel(tf_meta_analysis)
-```
 
-This script performs the following steps:
-1. Loads the data for the meta-analysis
-2. Conducts a random-effects meta-analysis using REML
-3. Creates a forest plot of the results
-4. Generates a Baujat plot to assess study influence
-5. Performs Egger's test for publication bias
-6. Applies the trim-and-fill method to adjust for potential publication bias
-7. Creates a funnel plot with the trim-and-fill results
+# Calculate Fail-Safe N (Rosenthal's method)
+fsn <- fsn(yi, vi, data = data, type = "Rosenthal")
+print(fsn)
+
+# Calculate Orwin's Fail-Safe N
+# Define the target effect size (e.g., 0.2 for a small effect)
+target_effect <- 0.2
+
+# Calculate Orwin's Fail-Safe N
+orwin_fsn <- fsn(yi, vi, data = data, type = "Orwin", target = target_effect)
+print(orwin_fsn)
 
 ### 3. Subgroup Analysis (subgroup_analysis.R)
-
-```R
 # Load necessary library
 library(metafor)
 
 # Create data frame with study data
-data <- data.frame(
-  author = c("Zissi et al.", "Manning et al.", "Tsang"),
-  k = c(74, 72, 161),
-  n = c(102, 109, 183)
+study_data <- data.frame(
+  Author = c("Zissi et al.", "Manning et al.", "Tsang et al."),
+  Successes = c(74, 72, 161),
+  Total = c(102, 109, 183),
+  stringsAsFactors = FALSE
 )
 
 # Calculate proportions
-data$p <- data$k / data$n
+study_data$Proportion <- study_data$Successes / study_data$Total
+
+# Check for proportions exactly 0 or 1 to avoid issues with logit transformation
+if(any(study_data$Proportion == 0 | study_data$Proportion == 1)) {
+  stop("Proportions of 0 or 1 detected. Consider adding a continuity correction.")
+}
 
 # Calculate variance for raw proportions
-data$variance <- (data$p * (1 - data$p)) / data$n
+study_data$Variance <- (study_data$Proportion * (1 - study_data$Proportion)) / study_data$Total
 
-# Truncate study titles
-data$TruncatedTitle <- c(
+# Truncate study titles for consistency (if necessary)
+study_data$TruncatedTitle <- c(
   "Zissi et al.",
   "Manning & White",
-  "Tsang et al.")
-  
-# Meta-analysis using raw proportions
-rma_raw <- rma(yi = p, vi = variance, data = data)
+  "Tsang et al."
+)
 
-# Summary of the meta-analysis
-summary(rma_raw)
-forest(rma_raw, slab = data$TruncatedTitle, xlab = "Effect Size", 
-       mlab = "Random-Effects Model", addpred = TRUE)
-baujat(rma_raw)
+# Meta-analysis using raw proportions (Proportion Method)
+meta_raw <- rma(yi = Proportion, vi = Variance, data = study_data, method = "REML")
 
-# Add logit-transformed proportions
-data$logit_p <- log(data$p / (1 - data$p))
+# Summary of the raw proportions meta-analysis
+summary(meta_raw)
+
+# Enhanced Forest Plot for raw proportions without transformation
+par(mar = c(4, 8, 4, 2))  # Adjust margins: bottom, left, top, right
+
+forest(meta_raw, 
+       slab = study_data$TruncatedTitle, 
+       xlab = "Proportion",
+       ilab = study_data$Total, # Add Total as an additional column
+       ilab.xpos = max(meta_raw$ci.ub, na.rm = TRUE) * 0.6, # Positioning for ilab
+       cex = 0.8,               # Text size
+       psize = 1,               # Point size
+       header = "Study",
+       mlab = "Random-Effects Model",
+       addfit = TRUE,           # Add summary effect
+       showweights = TRUE       # Show weights
+)
+
+# Add a legend for the additional information
+op <- par(cex=0.8, font=2)
+text(x = max(meta_raw$ci.ub, na.rm = TRUE) * 0.6, 
+     y = length(study_data$Author) + 2, 
+     labels = "n", pos = 3)
+par(op)
+
+# Reset plotting parameters to default
+par(mar = c(5, 4, 4, 2) + 0.1)
+
+# Baujat plot to identify influential studies
+baujat(meta_raw)
+
+# Logit transformation of proportions
+study_data$LogitProportion <- log(study_data$Proportion / (1 - study_data$Proportion))
 
 # Calculate variance of the logit-transformed proportions
-data$logit_variance <- (data$variance) / (data$p * (1 - data$p))^2 ####Ninon please check this ####
+# Var(logit(p)) = Var(p) / [p(1 - p)]^2
+study_data$LogitVariance <- study_data$Variance / (study_data$Proportion * (1 - study_data$Proportion))^2
 
 # Meta-analysis using logit-transformed proportions
-rma_logit <- rma(yi = logit_p, vi = logit_variance, data = data)
+meta_logit <- rma(yi = LogitProportion, vi = LogitVariance, data = study_data, method = "REML")
 
-# Summary of the meta-analysis
-summary(rma_logit)
+# Summary of the logit-transformed proportions meta-analysis
+summary(meta_logit)
 
-# Calculate the transformed effect size (back to proportions)
-transformed_proportion <- function(logit) {
+# Transform the summary effect back to proportions
+transform_proportion <- function(logit) {
   exp(logit) / (1 + exp(logit))
 }
 
-# Get transformed results
-logit_summary <- summary(rma_logit)
-transformed_mean <- transformed_proportion(logit_summary$yi)
-transformed_mean
-```
+# Extract the transformed mean proportion and its confidence interval
+logit_summary <- summary(meta_logit)
+transformed_mean <- transform_proportion(logit_summary$beta)
+transformed_ci_lower <- transform_proportion(logit_summary$ci.lb)
+transformed_ci_upper <- transform_proportion(logit_summary$ci.ub)
 
+# Display the transformed results
+cat("Transformed Mean Proportion:", round(transformed_mean, 3), "\n")
+cat("95% CI:", round(transformed_ci_lower, 3), "-", round(transformed_ci_upper, 3), "\n")
+
+# Optional: Enhanced Forest Plot for logit-transformed proportions
+# This requires back-transforming the estimates and variances
+# Note: metafor does not natively support back-transformed forest plots,
+# so it's often better to interpret on the logit scale or use other visualization tools.
+
+# Reset plotting parameters to default
+par(mar = c(5, 4, 4, 2) + 0.1)
 This script performs the following steps:
 1. Loads proportion data for the subgroup analysis
 2. Conducts a meta-analysis using raw proportions
@@ -272,10 +460,14 @@ Copyright (c) 2024 Ninon Crestois, Ricardo Twumasi
 
 4. Cochran, W. G. (1954). The combination of estimates from different experiments. Biometrics, 10(1), 101-129.
 
-5. Duval, S., & Tweedie, R. (2000). Trim and fill: a simple funnel-plot–based method of testing and adjusting for publication bias in meta-analysis. Biometrics, 56(2), 455-463.
+5. Chinn S. A simple method for converting an odds ratio to effect size for use in meta-analysis. Statistics in Medicine 2000;19(22):3127-3131.
+   
+6. Borenstein M, Hedges LV, Higgins JPT, Rothstein HR. Introduction to Meta-Analysis: Wiley; 2011.
 
-6. Egger, M., Smith, G. D., Schneider, M., & Minder, C. (1997). Bias in meta-analysis detected by a simple, graphical test. Bmj, 315(7109), 629-634.
+7. Duval, S., & Tweedie, R. (2000). Trim and fill: a simple funnel-plot–based method of testing and adjusting for publication bias in meta-analysis. Biometrics, 56(2), 455-463.
 
-7. Higgins, J. P., & Thompson, S. G. (2002). Quantifying heterogeneity in a meta‐analysis. Statistics in medicine, 21(11), 1539-1558.
+8. Egger, M., Smith, G. D., Schneider, M., & Minder, C. (1997). Bias in meta-analysis detected by a simple, graphical test. Bmj, 315(7109), 629-634.
 
-8. Higgins, J. P., Thompson, S. G., Deeks, J. J., & Altman, D. G. (2003). Measuring inconsistency in meta-analyses. Bmj, 327(7414), 557-560.
+9. Higgins, J. P., & Thompson, S. G. (2002). Quantifying heterogeneity in a meta‐analysis. Statistics in medicine, 21(11), 1539-1558.
+
+10. Higgins, J. P., Thompson, S. G., Deeks, J. J., & Altman, D. G. (2003). Measuring inconsistency in meta-analyses. Bmj, 327(7414), 557-560.
