@@ -19,7 +19,7 @@ This code may be repurposed for other meta-analyses or updated to add studies as
 1. Clone this repository: git clone https://github.com/ricardotwumasi/psychosis-employment-meta-analysis.git
 
 2. Install the required R packages:
-```R
+
 install.packages(c("metafor", "dplyr", "tidyr", "purrr"))
 
 Usage
