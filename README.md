@@ -87,6 +87,10 @@ Zissi A, Rontos C, Papageorgiou D, Pierrakou C, Chtouris S. Greek employers’ a
 
 Please feel free to submit issues or pull requests if you have suggestions for improvements or find any bugs, or would like to continue this meta-analysis with new studies.
 
+## AI Statement
+
+This code was edited with the assistance of Claude Sonnet 3.5 (Anthropic, San Francisco: CA)
+
 ## License
 
 MIT License
